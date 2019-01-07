@@ -51,7 +51,7 @@ for (var i = 0; i < tableData.length; i++) {
 // end of table creation
 table_html+="</table>";
 // create a full html variable to add column headers (School Name, Address, Zipcode) to the table_html we just created
-full_html = "<thead><tr><th>Game Info</th><th>Road Team</th><th></th><th>Home Team</th></tr></thead>" + table_html;
+full_html = "<thead><tr><td align='center'><strong>Game Info</strong></td><td align='center'><strong>Road Team</strong></td><th></th><td align='center'><strong>Home Team</strong></td></tr></thead>" + table_html;
 
 // access by table id="games-table" from index.html file and populate with values from full_html variable
 return document.getElementById("games-table").innerHTML = full_html;
