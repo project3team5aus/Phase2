@@ -24,6 +24,7 @@ Base.prepare(engine, reflect=True)
 Schedule = Base.classes.nba_2018_2019_schedule_logo
 TodayPredictions = Base.classes.today_predictions
 Stats = Base.classes.stats
+YearPredictions = Base.classes.year_predictions
 
 # Create our session (link) from Python to the DB
 session = Session(engine)
@@ -148,7 +149,29 @@ def t_stats():
 
     return jsonify(today_stats)
 
-    
+@app.route("/year_predictions")
+def y_predictions():
+    """Return a list of data for rest of season games including our predictions for each game"""
+    # Query all today games
+    results = session.query(YearPredictions).all()
+
+    # Create a dictionary from the row data and append to a list of all_games
+    yr_games = []
+    for y_game in results:
+        y_game_dict = {}
+        y_game_dict["date"] = y_game.date
+        y_game_dict["home_team"] = y_game.home_team
+        y_game_dict["road_team"] = y_game.road_team
+        y_game_dict["home_team_abr"] = y_game.home_team_abr
+        y_game_dict["road_team_abr"] = y_game.road_team_abr
+        y_game_dict["road_win_prediction"] = y_game.road_win_prediction
+        y_game_dict["home_team_logo"] = y_game.home_team_logo
+        y_game_dict["road_team_logo"] = y_game.road_team_logo
+        yr_games.append(y_game_dict)
+
+    year_json = jsons.dump(yr_games)
+    print(year_json)
+    return render_template("year_predictions.html", year_json=year_json)
 
 
 if __name__ == '__main__':
