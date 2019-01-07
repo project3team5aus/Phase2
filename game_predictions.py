@@ -386,6 +386,88 @@ c.executescript('''
 c.close()
 conn.close()
 
+# -------------------------------------------------------------------------------------
+# Step 6
+# a) get updated stats into arrays for road and home teams for each game being played in 2019 (rest of season)
+# b) make prediction for road team for each game being played in 2019 (rest of season)
+# -------------------------------------------------------------------------------------
+# create a current stats dataframe equal to stats_sql_df we had gotten from scraping earlier
+current_stats_df = stats_sql_df
+current_stats_df.head()
+
+# function to get a year's games from schedule table into a dataframe
+# this queries database
+
+def get_year_games(year):
+    cmd1 = 'SELECT game_id, date, home_team, road_team, home_team_abr, road_team_abr, road_win_prediction, home_team_logo, road_team_logo FROM nba_2018_2019_schedule_logo WHERE substr(date, 5, 4)='
+    print(cmd1)
+    cmd2 = "'"
+    print(cmd2)
+    cmd3 = "'"
+    print(cmd3)
+    cmd4 = 'or substr(date, 6, 4)='
+    print(cmd4)
+    cmd5 = "'"
+    print(cmd2)
+    cmd6 = "'"
+    print(cmd3)
+    cmd = cmd1 + cmd2 + year + cmd3 + cmd4 + cmd5 + year + cmd6
+    print(cmd)
+    schedule_year_df = pd.read_sql_query(cmd,schedule_engine)
+    return schedule_year_df
+
+# get 2019's games into a dataframe
+season_year = '2019'
+year_games_df = get_year_games(season_year)
+year_games_df.head()
+
+# run function that will use current_stats_df to modify road_win_prediction column in year_games_df
+prediction_iterrow(year_games_df, current_stats_df)
+
+# update SQL database in a table called 'year_predictions' with our predictions for the rest of season (year) games
+year_schedule_abr_engine = create_engine('sqlite:///db/schedule_abr.sqlite')
+year_games_df.to_sql('year_predictions', year_schedule_abr_engine, if_exists='replace', chunksize=75, index=False)
+
+# test that we can query from year_predictions table in db
+year_predictions_sql_df = pd.read_sql_query('SELECT * FROM year_predictions',schedule_abr_engine)
+year_predictions_sql_df.head()
+
+# NEED TO SET PRIMARY KEY after to_sql is done so that later sqlalchemy can interact with the today_predictions table
+
+import sqlite3
+#connect to the database
+conn = sqlite3.connect('db/schedule_abr.sqlite')
+c = conn.cursor()
+
+c.executescript('''
+    PRAGMA foreign_keys=off;
+
+    BEGIN TRANSACTION;
+    ALTER TABLE year_predictions RENAME TO old_year_table;
+
+    /*create a new table with the same column names and types while
+    defining a primary key for the desired column*/
+    CREATE TABLE year_predictions (game_id INTEGER NOT NULL PRIMARY KEY,
+                            date text NOT NULL,
+                            home_team text NOT NULL,
+                            road_team text NOT NULL,
+                            home_team_abr text NOT NULL,
+                            road_team_abr text NOT NULL,
+                            road_win_prediction text NOT NULL,
+                            home_team_logo text NOT NULL,
+                            road_team_logo text NOT NULL);
+
+    INSERT INTO year_predictions SELECT * FROM old_year_table;
+
+    DROP TABLE old_year_table;
+    COMMIT TRANSACTION;
+
+    PRAGMA foreign_keys=on;''')
+
+#close out the connection
+c.close()
+conn.close()
+
 #------------------------------------------------------------------
 print('End of game_predictions.py script')
 # That is all for now. 
